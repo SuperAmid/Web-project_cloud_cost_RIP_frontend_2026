@@ -284,6 +284,31 @@ body {
   background: var(--red-dark);
 }
 
+/* Красные кнопки остаются красными в любом состоянии: без этого после нажатия
+   (фокус, :active) Bootstrap перекрашивает .btn-primary в синий */
+.btn.next-icon,
+.btn.next-icon:focus,
+.btn.next-icon:focus-visible,
+.btn.next-icon:active,
+.btn.next-icon:first-child:active,
+.btn.action-button,
+.btn.action-button:focus,
+.btn.action-button:focus-visible,
+.btn.action-button:active,
+.btn.action-button:first-child:active,
+.btn.action-button:disabled {
+  background: var(--red);
+  border-color: var(--red);
+  color: #fff;
+  box-shadow: none;
+}
+
+.btn.next-icon:hover,
+.btn.action-button:hover {
+  background: var(--red-dark);
+  border-color: var(--red-dark);
+}
+
 /* ---------- Кнопки и фильтр ---------- */
 
 .action-button,
