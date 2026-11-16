@@ -1,5 +1,4 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { loadToken } from "../api";
 
 // Авторизация — базовые возможности Redux Toolkit: slice с reducer и action.
 // Запросы входа и выхода выполняет сам компонент, а в store попадает результат.
@@ -8,9 +7,11 @@ interface AuthState {
   userName: string | null;
 }
 
+// После F5 store создаётся заново в состоянии гостя. JWT при этом остаётся
+// в Local Storage (вкладка Application), но в store не загружается — нужен повторный вход.
 const initialState: AuthState = {
-  token: loadToken(), // после F5 токен берётся из Local Storage
-  userName: null, // имя в Local Storage не храним: после F5 показываем «Создатель»
+  token: null,
+  userName: null,
 };
 
 const authSlice = createSlice({

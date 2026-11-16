@@ -19,10 +19,9 @@ export const api = new Api<string>({
     token ? { headers: { Authorization: `Bearer ${token}` } } : {},
 });
 
-// JWT — единственное, что хранится в Local Storage: после F5 пользователь остаётся
-// авторизованным, пока токен действует.
-export const loadToken = (): string | null => localStorage.getItem(TOKEN_KEY);
-
+// JWT — единственное, что хранится в Local Storage. После F5 он остаётся там
+// (его видно во вкладке Application), но приложение начинает в состоянии гостя
+// и токен не отправляет, пока пользователь снова не войдёт.
 export const saveToken = (token: string | null) => {
   if (token) {
     localStorage.setItem(TOKEN_KEY, token);
@@ -31,6 +30,3 @@ export const saveToken = (token: string | null) => {
   }
   api.setSecurityData(token);
 };
-
-// Токен, сохранённый до перезагрузки страницы, сразу передаём клиенту
-api.setSecurityData(loadToken());
