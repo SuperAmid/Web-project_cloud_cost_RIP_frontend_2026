@@ -13,7 +13,7 @@ export default defineConfig({
     // Прокси к веб-сервису на Go: запросы фронтенда на /api уходят на :8080, CORS не нужен.
     proxy: {
       "/api": {
-        target: "http://localhost:8080",
+        target: "http://127.0.0.1:8080", // явно IPv4: на Windows localhost может уйти в ::1
         changeOrigin: true,
       },
     },

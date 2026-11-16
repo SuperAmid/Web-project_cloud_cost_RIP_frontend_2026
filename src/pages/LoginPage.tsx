@@ -31,7 +31,7 @@ export const LoginPage: FC = () => {
       dispatch(loggedIn({ token, userName: data.user?.display_name ?? email }));
       navigate(ROUTES.FEED);
     } catch (err) {
-      setError(errorMessage(err, "Не удалось войти: веб-сервис недоступен"));
+      setError(errorMessage(err, "Не удалось войти"));
     } finally {
       setSending(false);
     }

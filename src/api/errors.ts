@@ -5,6 +5,11 @@ export const errorMessage = (error: unknown, fallback: string): string => {
   if (isAxiosError(error)) {
     const data = error.response?.data as { error?: string } | undefined;
     if (data?.error) return data.error;
+    const status = error.response?.status;
+    if (status === undefined || status >= 500) {
+      return `${fallback}: веб-сервис недоступен${status ? ` (${status})` : ""}`;
+    }
+    return `${fallback} (${status})`;
   }
   return fallback;
 };
