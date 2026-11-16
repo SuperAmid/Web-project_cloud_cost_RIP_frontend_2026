@@ -1,21 +1,20 @@
 import { PROVIDER_ROUTERS_MOCK } from "./mock";
 import { ProviderRouter, ProviderRoutersFilter } from "./types";
 
-// В ЛР5 содержимое карточек берётся только из коллекции mock-объектов, без бэкенда.
-// Функции повторяют методы веб-сервиса и возвращают Promise, поэтому в ЛР6 вместо
-// mock здесь появится fetch/axios к /api, а страницы останутся без изменений.
+// Запасной вариант из ЛР5: если веб-сервис недоступен (не запущен, прокси вернул 5xx),
+// гостевые страницы берут данные из коллекции mock-объектов. Основные запросы —
+// в src/store через сгенерированный по swagger клиент (src/api).
 
-// Аналог GET /api/provider_routers?min_bandwidth_mbps=… — плитка с фильтром
-export const getProviderRouters = async (
+// Как GET /api/provider_routers?min_bandwidth_mbps=…
+export const getProviderRoutersMock = async (
   filter: ProviderRoutersFilter,
 ): Promise<ProviderRouter[]> =>
   PROVIDER_ROUTERS_MOCK.filter(
     (item) => item.bandwidth_mbps >= filter.minBandwidthMbps,
   );
 
-// Аналог GET /api/provider_routers/feed[?id=…[&next=true]] — одна карточка ленты.
-// Без id — первая карточка; с next — следующая после id (после последней — снова первая).
-export const getProviderRouterFeed = async (
+// Как GET /api/provider_routers/feed[?id=…[&next=true]]
+export const getProviderRouterFeedMock = async (
   id?: number,
   next = false,
 ): Promise<ProviderRouter | undefined> => {

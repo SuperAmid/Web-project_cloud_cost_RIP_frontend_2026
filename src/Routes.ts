@@ -14,3 +14,6 @@ export const ROUTE_LABELS: { [key in RouteKeyType]: string } = {
   LIST: "Маршрутизаторы",
   LOGIN: "Вход",
 };
+
+// У авторизованного пользователя вместо «Вход» — «Выход»
+export const LOGOUT_LABEL = "Выход";

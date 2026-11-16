@@ -1,34 +1,79 @@
-# provider_routers — фронтенд (ЛР5)
+# provider_routers — фронтенд (ЛР5–ЛР6)
 
-Лабораторная работа №5 курса «Разработка интернет-приложений»: базовое SPA на **React + TypeScript** (сборщик **Vite**, компоненты **React-Bootstrap**, роутинг **react-router-dom**) для темы «Маршрутизаторы сети провайдера». Интерфейс гостя повторяет две страницы ЛР1 — **ленту** и **плитку** — в том же стиле (цвета, кнопки и нижняя навигация из ЛР1–ЛР2).
+Лабораторные работы №5–6 курса «Разработка интернет-приложений». ЛР5 — базовое SPA на **React + TypeScript** (сборщик **Vite**, компоненты **React-Bootstrap**, роутинг **react-router-dom**) для темы «Маршрутизаторы сети провайдера». Интерфейс гостя повторяет две страницы ЛР1 — **ленту** и **плитку** — в том же стиле (цвета, кнопки и нижняя навигация из ЛР1–ЛР2). ЛР6 — подключение веб-сервиса: все запросы через сгенерированный из Swagger клиент на Axios, состояние в Redux Toolkit, вход и выход, интерфейс создателя (добавление, лайки, удаление).
 
 Бэкенд (веб-сервис на Go): [Web-project_cloud_cost_RIP_backend_2026](https://github.com/SuperAmid/Web-project_cloud_cost_RIP_backend_2026).
 
 ## Запуск
 
-Нужен [Node.js](https://nodejs.org/) 18 или новее.
+Нужен [Node.js](https://nodejs.org/) 18 или новее и запущенный веб-сервис из ветки [`swagger-codegen`](https://github.com/SuperAmid/Web-project_cloud_cost_RIP_backend_2026/tree/swagger-codegen) бэкенда (`docker compose up -d`, `go run .`).
 
 ```bash
 npm install
+npm run generate-api   # клиент API из swagger/swagger.json → src/api/Api.ts
 npm run dev
 ```
 
 Приложение открывается на `http://localhost:3000`. Сборка для продакшена — `npm run build`, результат в `dist/`.
 
-В ЛР5 содержимое карточек берётся **только из коллекции mock-объектов** (`src/modules/mock.ts`), веб-сервис не нужен. Изображения и видео в mock указаны адресами MinIO, как их отдаёт бэкенд (`http://localhost:9000/provider-media/...`). Если запустить MinIO из бэкенда (`docker compose up -d` в его папке), карточки покажут файлы из MinIO; если MinIO не запущен или поле пустое — изображение и видео по умолчанию из папки `public`.
+Все запросы идут на `/api`, Vite проксирует их на веб-сервис `http://localhost:8080` (`vite.config.ts`), поэтому CORS не нужен. Изображения и видео загружаются из MinIO по `image_url` / `video_url` (`http://localhost:9000/provider-media/...`); пустой адрес или ошибка загрузки — файлы по умолчанию из папки `public`. Если веб-сервис не запущен, лента и плитка показывают коллекцию mock-объектов из ЛР5 (`src/modules/mock.ts`).
 
-Прокси `/api` → `http://localhost:8080` в `vite.config.ts` уже настроен для ЛР6, в ЛР5 запросов к нему нет.
+## ЛР6: Redux Toolkit, Axios и кодогенерация из Swagger
+
+### Кодогенерация
+
+`swagger/swagger.json` — описание веб-сервиса из ЛР4 (swaggo), у каждого метода есть `operationId`. Команда `npm run generate-api` запускает `swagger-typescript-api` с шаблоном **axios** и создаёт `src/api/Api.ts`: интерфейсы сущностей бэкенда и класс `Api` с методами по доменам. В коде используются только сгенерированные методы, `fetch` и ручных `axios.get` нет. Экземпляр клиента — `src/api/index.ts`: `baseURL: "/api"` и `securityWorker`, который добавляет `Authorization: Bearer <JWT>` к методам с BearerAuth.
+
+### 9 AJAX-запросов к веб-сервису
+
+Регистрация в ЛР6 не делается, остальные 9 методов вызываются из интерфейса:
+
+| № | Метод веб-сервиса | Сгенерированный метод | Где вызывается |
+| --- | --- | --- | --- |
+| 1 | `GET /api/provider_routers?min_bandwidth_mbps=` | `api.providerRouters.getProviderRouters` | плитка, кнопка «Фильтровать» — thunk `fetchProviderRouters` |
+| 2 | `GET /api/provider_routers/feed?id=&next=` | `api.providerRouters.getProviderRouterFeed` | лента и кнопка «→» — thunk `fetchFeed` |
+| 3 | `GET /api/provider_routers/draft` | `api.providerRouters.getProviderRouterDraft` | открытие «Добавления» — thunk `fetchDraft` |
+| 4 | `POST /api/provider_routers` (multipart) | `api.providerRouters.createProviderRouter` | «Добавление», кнопка «Далее» — thunk `createDraft` |
+| 5 | `PUT /api/provider_routers/{id}/publish` | `api.providerRouters.publishProviderRouter` | «Добавление», кнопка «Опубликовать» — thunk `publishDraft` |
+| 6 | `DELETE /api/provider_routers/{id}` | `api.providerRouters.deleteProviderRouter` | плитка, «Удалить» у своих карточек; «Удалить черновик» — thunk `deleteProviderRouter` |
+| 7 | `POST /api/provider_routers/{id}/like` | `api.providerRouters.likeProviderRouter` | лента, ♥ у создателя — thunk `toggleLike` |
+| 8 | `POST /api/provider_router_users/login` | `api.providerRouterUsers.loginProviderRouterUser` | страница «Вход» — в компоненте `LoginPage` |
+| 9 | `POST /api/provider_router_users/logout` | `api.providerRouterUsers.logoutProviderRouterUser` | пункт «Выход» — в компоненте `BottomNav` |
+
+### Redux Toolkit
+
+Хранилище `src/store` (`configureStore`, thunk middleware по умолчанию):
+
+| Slice | Что хранит | Как меняется |
+| --- | --- | --- |
+| `auth` | JWT и имя пользователя | actions `loggedIn` / `loggedOut`; запросы входа и выхода выполняет компонент |
+| `providerRouters` | значение слайдера, применённый фильтр, список, флаг mock | async thunk `fetchProviderRouters`, `deleteProviderRouter`; actions `sliderChanged`, `filterApplied` |
+| `feed` | текущая карточка ленты | async thunk `fetchFeed`, `toggleLike` |
+| `draft` | черновик создателя | async thunk `fetchDraft`, `createDraft`, `publishDraft` |
+
+Компоненты вызывают `dispatch(action)` из событий (`useAppDispatch`) и получают данные через `useAppSelector`. Значение фильтра лежит в store, поэтому сохраняется при переходе между страницами.
+
+### Авторизация
+
+- **Вход** (`/login`): email и пароль, после успеха JWT сохраняется в Local Storage (только он), в store — `loggedIn`, переход в ленту. Пользователь из seed: `student@provider-routers.local` / `password123`.
+- После входа меняется интерфейс: открывается «Добавление», вместо «Вход» — **«Выход»**, в ленте ♥ нажимается (лайк ставится и снимается), в плитке у своих карточек (`is_own = 1`) есть «Удалить».
+- **Выход**: запрос logout (токен попадает в blacklist Redis), токен удаляется из Local Storage, `loggedOut`.
+- После F5 токен берётся из Local Storage, пользователь остаётся авторизованным.
+
+### Добавление
+
+Шаг 1 — название, изображение и видео; выбранные файлы сразу видны в превью. «Далее» сохраняет черновик (файлы уходят в MinIO), и на странице появляются изображение и видео уже с сервера. Шаг 2 — описание, пропускная способность и стоимость; «Опубликовать» открывает новую карточку в ленте. Черновик можно удалить.
 
 ## Страницы
 
-В приложении **4 страницы** — те же, что в ТЗ и на диаграмме классов: **Лента**, **Добавление**, **Маршрутизаторы** (плитка) и **Вход и регистрация**. В ЛР5 (интерфейс гостя) работают лента и плитка; добавление и вход описаны ниже полностью, их пункты в навигации пока неактивны и включаются в ЛР6–ЛР7 вместе с авторизацией.
+В приложении **4 страницы** — те же, что в ТЗ и на диаграмме классов: **Лента**, **Добавление**, **Маршрутизаторы** (плитка) и **Вход и регистрация**. В ЛР5 работали только лента и плитка (интерфейс гостя), в ЛР6 подключены все четыре.
 
-| № | Страница | Адрес | Кому доступна | Метод веб-сервиса | ЛР5 |
+| № | Страница | Адрес | Кому доступна | Метод веб-сервиса | ЛР6 |
 | --- | --- | --- | --- | --- | --- |
-| 1 | Лента | `/provider_routers/feed`, `/provider_routers/feed/:id` | всем | `GET /api/provider_routers/feed` (`id`, `next`), лайк — `POST /api/provider_routers/{id}/like` | работает на mock |
-| 2 | Добавление | `/provider_routers/draft` | создателю (после входа) | `GET /api/provider_routers/draft`, `POST /api/provider_routers`, `PUT /api/provider_routers/{id}/publish` | пункт неактивен |
-| 3 | Маршрутизаторы (плитка) | `/provider_routers` | всем | `GET /api/provider_routers?min_bandwidth_mbps=` , удаление — `DELETE /api/provider_routers/{id}` | работает на mock |
-| 4 | Вход и регистрация | `/login` | гостю | `POST /api/provider_router_users/login`, `POST /api/provider_router_users/register`; выход — `POST /api/provider_router_users/logout` | пункт неактивен |
+| 1 | Лента | `/provider_routers/feed`, `/provider_routers/feed/:id` | всем | `GET /api/provider_routers/feed` (`id`, `next`), лайк — `POST /api/provider_routers/{id}/like` | работает с веб-сервисом |
+| 2 | Добавление | `/provider_routers/draft` | создателю (после входа) | `GET /api/provider_routers/draft`, `POST /api/provider_routers`, `PUT /api/provider_routers/{id}/publish` | работает после входа |
+| 3 | Маршрутизаторы (плитка) | `/provider_routers` | всем | `GET /api/provider_routers?min_bandwidth_mbps=` , удаление — `DELETE /api/provider_routers/{id}` | работает с веб-сервисом |
+| 4 | Вход и регистрация | `/login` | гостю | `POST /api/provider_router_users/login`, `POST /api/provider_router_users/register`; выход — `POST /api/provider_router_users/logout` | работает (без регистрации) |
 
 Все страницы открываются в рамке телефона (на компьютере — по центру экрана, на телефоне — во весь экран). Снизу на каждой странице — навигационная панель из 4 пунктов.
 
@@ -37,9 +82,9 @@ npm run dev
 | Пункт | Адрес | Доступность |
 | --- | --- | --- |
 | Лента | `/provider_routers/feed` | доступен, подсвечивается на странице ленты |
-| Добавление | `/provider_routers/draft` | недоступен гостю (серый, не нажимается); создателю — страница 2 |
+| Добавление | `/provider_routers/draft` | гостю недоступен (серый, не нажимается); после входа открывает страницу 2 |
 | Маршрутизаторы | `/provider_routers` | доступен, подсвечивается на странице плитки |
-| Вход / Выход | `/login` | в ЛР5 серый; гостю — страница 4, создателю — «Выход» (вызов logout) |
+| Вход / Выход | `/login` | гостю — «Вход» (страница 4); после входа — «Выход» (вызов logout) |
 
 ### 1. Лента — `/provider_routers/feed` и `/provider_routers/feed/:id`
 
@@ -83,27 +128,27 @@ npm run dev
 | Элемент | Что делает |
 | --- | --- |
 | Слайдер «Мин. пропускная способность» | от 0 до 100 000 Мбит/с с шагом 1000, выбранное значение показано рядом с подписью |
-| Кнопка «Фильтровать» | применяет фильтр: значение попадает в адрес `?min_bandwidth_mbps=10000`, список перечитывается. Фильтр сохраняется после поиска, при обновлении страницы и кнопке «Назад» |
+| Кнопка «Фильтровать» | применяет фильтр: `GET /api/provider_routers?min_bandwidth_mbps=10000`. Значение слайдера и фильтр хранятся в Redux и сохраняются при переходе на другие страницы и обратно |
 | Карточка | изображение (по умолчанию, если `image_url` пустой или файл не загрузился), название, пропускная способность, стоимость, ♥ и количество лайков |
 | Нажатие на карточку | открывает ленту, начиная с этой карточки |
-| Кнопка «Удалить» | только у своих карточек создателя (`is_own = 1`): `DELETE /api/provider_routers/{id}`, карточка пропадает из плитки (логическое удаление, статус `deleted`). В ЛР5 у гостя кнопки нет |
+| Кнопка «Удалить» | только у своих карточек создателя (`is_own = 1`): `DELETE /api/provider_routers/{id}`, карточка пропадает из плитки (логическое удаление, статус `deleted`). У гостя кнопки нет |
 
 Если под фильтр ничего не подходит — «Маршрутизаторы с таким значением не найдены».
 
 ### 4. Вход и регистрация — `/login`
 
-Доступна гостю, у создателя вместо пункта «Вход» в навигации — «Выход». Одна форма с переключателем «Вход / Регистрация».
+Доступна гостю, у создателя вместо пункта «Вход» в навигации — «Выход». В ЛР6 — только вход, регистрация не делается (поле «Имя» и кнопка «Зарегистрироваться» относятся к полной версии).
 
 | Элемент | Что делает |
 | --- | --- |
 | Поле «Email» | обязательное, формат email, до 120 символов |
 | Поле «Имя» | только в режиме регистрации, до 80 символов |
 | Поле «Пароль» | обязательное, от 6 до 72 символов, ввод скрыт |
-| Кнопка «Войти» | `POST /api/provider_router_users/login` → JWT `access_token`; токен сохраняется в приложении и подставляется в заголовок `Authorization: Bearer …` следующих запросов; переход в ленту, в навигации открываются «Добавление» и «Выход» |
+| Кнопка «Войти» | `POST /api/provider_router_users/login` → JWT `access_token`; токен сохраняется в Local Storage и подставляется в заголовок `Authorization: Bearer …` следующих запросов; переход в ленту, в навигации открываются «Добавление» и «Выход» |
 | Кнопка «Зарегистрироваться» | `POST /api/provider_router_users/register` с email, именем и паролем; после успеха форма переключается на вход с тем же email |
 | Пункт навигации «Выход» (у создателя) | `POST /api/provider_router_users/logout` — токен попадает в blacklist Redis, приложение забывает его и возвращается к интерфейсу гостя |
 
-Ошибки (`401` — неверный email или пароль, `409` — email уже зарегистрирован) показываются под формой.
+Ошибки (`401` — неверный email или пароль) показываются под формой.
 
 ### Служебная страница 404 — любой другой адрес
 
@@ -122,32 +167,42 @@ npm run dev
 
 | Файл | Что внутри |
 | --- | --- |
-| `src/main.tsx` | точка входа: подключение Bootstrap CSS, стилей и `App` |
-| `src/App.tsx` | роутинг: `BrowserRouter`, общая обёртка `AppLayout` и страницы |
+| `swagger/swagger.json` | описание веб-сервиса из ЛР4 — вход для кодогенерации |
+| `src/api/Api.ts` | **сгенерирован** `npm run generate-api`: типы и класс `Api` (axios) |
+| `src/api/index.ts` | экземпляр `api` (`baseURL: "/api"`, `securityWorker` с JWT), сохранение токена в Local Storage |
+| `src/api/errors.ts` | текст ошибки из ответа, проверка «веб-сервис недоступен» |
+| `src/store/index.ts` | `configureStore`, типизированные `useAppDispatch`, `useAppSelector`, `useIsAuth` |
+| `src/store/authSlice.ts` | slice авторизации: `loggedIn`, `loggedOut` |
+| `src/store/providerRoutersSlice.ts` | плитка: фильтр, список, thunk `fetchProviderRouters`, `deleteProviderRouter` |
+| `src/store/feedSlice.ts` | лента: thunk `fetchFeed`, `toggleLike` |
+| `src/store/draftSlice.ts` | добавление: thunk `fetchDraft`, `createDraft`, `publishDraft` |
+| `src/main.tsx` | точка входа: Bootstrap CSS, стили, `Provider store` и `App` |
+| `src/App.tsx` | роутинг: `BrowserRouter`, общая обёртка `AppLayout` и 4 страницы |
 | `src/Routes.ts` | адреса страниц и подписи пунктов навигации |
 | `src/AppLayout.tsx` | рамка телефона: строка состояния, `Outlet` с текущей страницей, нижняя навигация |
-| `src/pages/FeedPage.tsx` | лента |
-| `src/pages/ProviderRoutersPage.tsx` | плитка с фильтром |
+| `src/pages/FeedPage.tsx` | лента и лайк |
+| `src/pages/ProviderRoutersPage.tsx` | плитка с фильтром и удалением своих |
+| `src/pages/DraftPage.tsx` | добавление: черновик с файлами и публикация |
+| `src/pages/LoginPage.tsx` | вход |
 | `src/pages/NotFoundPage.tsx` | 404 |
-| `src/components/BandwidthFilter.tsx` | фильтр: слайдер `Form.Range` и кнопка, props `value`, `min`, `max`, `step`, `onChange`, `onSubmit` |
-| `src/components/ProviderRouterTile.tsx` | карточка плитки (`Card`), props — поля маршрутизатора и `onClick` |
+| `src/components/BandwidthFilter.tsx` | фильтр: слайдер `Form.Range` и кнопка |
+| `src/components/ProviderRouterTile.tsx` | карточка плитки (`Card`) с кнопкой «Удалить» у своих |
 | `src/components/RouterImage.tsx`, `RouterVideo.tsx` | изображение и видео с заменой на файлы по умолчанию |
-| `src/components/BottomNav.tsx` | нижняя навигационная панель (`Navbar`, `Nav.Link` + `NavLink`) |
+| `src/components/BottomNav.tsx` | нижняя навигация, «Вход» / «Выход» |
 | `src/components/StatusBar.tsx` | строка состояния телефона с часами |
-| `src/modules/types.ts` | тип `ProviderRouter` — поля как в JSON веб-сервиса |
-| `src/modules/mock.ts` | коллекция mock-объектов |
-| `src/modules/providerRoutersApi.ts` | функции получения данных: `getProviderRouters(filter)` и `getProviderRouterFeed(id, next)` — повторяют методы веб-сервиса, в ЛР5 читают mock |
+| `src/modules/types.ts` | типы `ProviderRouter`, `ProviderRouterDraft` и приведение ответов клиента к ним |
+| `src/modules/mock.ts`, `providerRoutersApi.ts` | mock-объекты ЛР5 — запасной вариант, если веб-сервис недоступен |
 | `src/styles.css` | стили приложения (подключаются после Bootstrap) |
 
 ## Хуки
 
 | Хук | Где | Зачем |
 | --- | --- | --- |
-| `useState` | `FeedPage`, `ProviderRoutersPage`, `RouterImage`, `RouterVideo`, `StatusBar` | данные карточек, загрузка, значение слайдера, «Ещё», признак ошибки загрузки файла, время |
-| `useEffect` | `FeedPage`, `ProviderRoutersPage`, `RouterImage`, `RouterVideo`, `StatusBar` | загрузка данных при открытии страницы и смене id или фильтра; сброс ошибки при новом адресе файла; таймер часов с очисткой при размонтировании |
+| `useAppDispatch` (`useDispatch`) | все страницы, `BottomNav` | вызвать action или thunk из события |
+| `useAppSelector` (`useSelector`) | все страницы, `BottomNav` | получить данные из store для отрисовки |
+| `useState` | `FeedPage`, `DraftPage`, `LoginPage`, `RouterImage`, `RouterVideo`, `StatusBar` | «Ещё», поля форм, выбранные файлы, признак ошибки загрузки файла, время |
+| `useEffect` | страницы, `RouterImage`, `RouterVideo`, `StatusBar` | загрузка данных при открытии страницы, смене id, фильтра или входе; превью файла с `URL.revokeObjectURL`; таймер часов |
+| `useRef` | `FeedPage` | не запрашивать карточку повторно после «→» |
 | `useParams` | `FeedPage` | `id` маршрутизатора из адреса |
-| `useNavigate` | `FeedPage`, `ProviderRoutersPage` | переход к следующей карточке и из плитки в ленту |
-| `useSearchParams` | `ProviderRoutersPage` | фильтр в адресе `?min_bandwidth_mbps=` |
+| `useNavigate` | страницы, `BottomNav` | переходы после «→», публикации, входа и выхода |
 | `useLocation` | `AppLayout` | класс текущей страницы для оформления ленты |
-
-Redux и React Context в ЛР5 не используются.

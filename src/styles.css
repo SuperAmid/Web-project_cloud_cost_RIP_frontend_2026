@@ -565,3 +565,87 @@ body {
   font-size: 1.6rem;
   margin: 6px 0 16px;
 }
+
+/* ---------- ЛР6: создатель ---------- */
+
+/* «Выход» в нижней навигации — кнопка, выглядит как остальные пункты */
+.bottom-nav button.nav-link {
+  background: none;
+  border: 0;
+}
+
+/* Лайк создателя в ленте — нажимается; закрашенное сердце — лайк поставлен */
+.like-button {
+  background: none;
+  border: 0;
+  color: #fff;
+  cursor: pointer;
+}
+
+.like-button.liked {
+  color: var(--red);
+}
+
+.feed-error {
+  margin: 4px 0 0;
+  color: #ffb3b8;
+  font-size: 0.8rem;
+}
+
+/* Плитка: лайки слева, «Удалить» у своих карточек справа */
+.provider_router_tile .tile-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.provider_router_tile .tile-delete {
+  margin-top: 6px;
+  padding: 1px 6px;
+  font-size: 0.72rem;
+}
+
+/* Формы входа и добавления */
+.form-card {
+  display: grid;
+  gap: 4px;
+  margin-top: 20px;
+}
+
+.form-card .form-label {
+  font-weight: 700;
+}
+
+.danger-link {
+  color: var(--red-dark);
+}
+
+/* Превью изображения и видео на странице добавления */
+.draft-media {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.draft-image,
+.draft-video {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--canvas);
+}
+
+.draft-placeholder {
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.draft-name {
+  margin: 0 0 8px;
+}

@@ -3,7 +3,7 @@ import { ProviderRouter } from "./types";
 // Адрес бакета MinIO, как его формирует бэкенд: http://localhost:9000/<bucket>/<ключ>
 const MINIO = "http://localhost:9000/provider-media";
 
-// Коллекция mock-объектов: только опубликованные маршрутизаторы (черновик и удалённые
+// Коллекция mock-объектов (ЛР5). В ЛР6 используется, только если веб-сервис недоступен: только опубликованные маршрутизаторы (черновик и удалённые
 // гостю не показываются). У последних двух записей пустые image_url / video_url —
 // на них видно изображение и видео по умолчанию из папки public проекта.
 export const PROVIDER_ROUTERS_MOCK: ProviderRouter[] = [
@@ -18,6 +18,7 @@ export const PROVIDER_ROUTERS_MOCK: ProviderRouter[] = [
     video_url: `${MINIO}/videos/core-loop.mp4`,
     likes_count: 2,
     is_liked: 0,
+    is_own: 0,
     creator_name: "Оператор сети",
     published_at: "2026-10-19T23:16:42+03:00",
   },
@@ -32,6 +33,7 @@ export const PROVIDER_ROUTERS_MOCK: ProviderRouter[] = [
     video_url: `${MINIO}/videos/ring-loop.mp4`,
     likes_count: 1,
     is_liked: 0,
+    is_own: 0,
     creator_name: "Оператор сети",
     published_at: "2026-10-19T23:16:42+03:00",
   },
@@ -46,6 +48,7 @@ export const PROVIDER_ROUTERS_MOCK: ProviderRouter[] = [
     video_url: `${MINIO}/videos/residential-loop.mp4`,
     likes_count: 2,
     is_liked: 0,
+    is_own: 0,
     creator_name: "Оператор сети",
     published_at: "2026-10-19T23:16:42+03:00",
   },
@@ -59,6 +62,7 @@ export const PROVIDER_ROUTERS_MOCK: ProviderRouter[] = [
     video_url: "",
     likes_count: 0,
     is_liked: 0,
+    is_own: 0,
     creator_name: "Студент РИП",
     published_at: "2026-10-22T11:07:18+03:00",
   },
@@ -73,6 +77,7 @@ export const PROVIDER_ROUTERS_MOCK: ProviderRouter[] = [
     video_url: `${MINIO}/videos/ring-loop.mp4`,
     likes_count: 3,
     is_liked: 0,
+    is_own: 0,
     creator_name: "Оператор сети",
     published_at: "2026-10-22T12:00:00+03:00",
   },

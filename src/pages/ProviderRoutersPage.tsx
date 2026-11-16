@@ -1,71 +1,71 @@
-import { FC, useEffect, useState } from "react";
-import { Spinner } from "react-bootstrap";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { FC, useEffect } from "react";
+import { Alert, Spinner } from "react-bootstrap";
+import { useNavigate } from "react-router-dom";
 import { BandwidthFilter } from "../components/BandwidthFilter";
 import { ProviderRouterTile } from "../components/ProviderRouterTile";
-import { getProviderRouters } from "../modules/providerRoutersApi";
-import { ProviderRouter } from "../modules/types";
 import { ROUTES } from "../Routes";
+import { useAppDispatch, useAppSelector, useIsAuth } from "../store";
+import {
+  deleteProviderRouter,
+  fetchProviderRouters,
+  filterApplied,
+  sliderChanged,
+} from "../store/providerRoutersSlice";
 
-// Плитка: все опубликованные маршрутизаторы в 2 столбца и фильтр по пропускной
-// способности. Применённый фильтр хранится в адресе (?min_bandwidth_mbps=10000),
-// поэтому сохраняется после поиска, при обновлении страницы и кнопке «Назад».
+// Плитка: опубликованные маршрутизаторы в 2 столбца и фильтр по пропускной способности.
+// Значение слайдера и применённый фильтр хранятся в Redux, поэтому сохраняются
+// при переходе на другие страницы и обратно.
 export const ProviderRoutersPage: FC = () => {
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const appliedBandwidth = Number(searchParams.get("min_bandwidth_mbps") ?? 0);
+  const dispatch = useAppDispatch();
+  const isAuth = useIsAuth();
+  const { sliderValue, minBandwidthMbps, items, loading, fromMock, error } = useAppSelector(
+    (state) => state.providerRouters,
+  );
 
-  const [bandwidth, setBandwidth] = useState(appliedBandwidth); // значение слайдера
-  const [routers, setRouters] = useState<ProviderRouter[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  // Список загружается при открытии страницы и после каждого применения фильтра
+  // Список загружается при открытии страницы, после применения фильтра и после входа/выхода
+  // (от токена зависит is_own)
   useEffect(() => {
-    setLoading(true);
-    getProviderRouters({ minBandwidthMbps: appliedBandwidth }).then((items) => {
-      setRouters(items);
-      setLoading(false);
-    });
-  }, [appliedBandwidth]);
-
-  // Слайдер всегда показывает фильтр из адреса (например, после «Назад»)
-  useEffect(() => {
-    setBandwidth(appliedBandwidth);
-  }, [appliedBandwidth]);
-
-  const handleFilter = () => {
-    setSearchParams(bandwidth ? { min_bandwidth_mbps: String(bandwidth) } : {});
-  };
+    dispatch(fetchProviderRouters(minBandwidthMbps));
+  }, [dispatch, minBandwidthMbps, isAuth]);
 
   return (
     <div className="page-grid-content">
       <header className="page-header">
-        <p className="eyebrow">Сеть провайдера · ЛР5</p>
+        <p className="eyebrow">Сеть провайдера · ЛР6</p>
         <h1>Маршрутизаторы</h1>
-        <p>Показаны опубликованные маршрутизаторы.</p>
+        <p>
+          {fromMock
+            ? "Веб-сервис недоступен — показаны mock-данные."
+            : "Показаны опубликованные маршрутизаторы."}
+        </p>
       </header>
 
       <BandwidthFilter
-        value={bandwidth}
+        value={sliderValue}
         min={0}
         max={100000}
         step={1000}
-        onChange={setBandwidth}
-        onSubmit={handleFilter}
+        onChange={(value) => dispatch(sliderChanged(value))}
+        onSubmit={() => dispatch(filterApplied())}
       />
+
+      {error && <Alert variant="danger">{error}</Alert>}
 
       {loading ? (
         <div className="page-loader">
           <Spinner animation="border" />
         </div>
-      ) : routers.length === 0 ? (
+      ) : items.length === 0 ? (
         <p className="empty-state">Маршрутизаторы с таким значением не найдены.</p>
       ) : (
         <section className="provider_router_grid">
-          {routers.map((item) => (
+          {items.map((item) => (
             <ProviderRouterTile
               key={item.id}
               {...item}
+              canDelete={isAuth && item.is_own === 1}
+              onDelete={() => dispatch(deleteProviderRouter(item.id))}
               onClick={() => navigate(`${ROUTES.FEED}/${item.id}`)}
             />
           ))}
